@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hormuz Minesweeper</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    user-select: none;
+  }
+
+  #game {
+    background: #bdbdbd;
+    border: 3px solid;
+    border-color: #fff #7b7b7b #7b7b7b #fff;
+    padding: 6px;
+  }
+
+  /* CNN Breaking News Banner */
+  #cnn-banner {
+    background: #cc0000;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 4px 8px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.5px;
+    font-family: 'CNN', 'Helvetica Neue', Arial, sans-serif;
+  }
+  #cnn-banner .cnn-logo {
+    background: white;
+    color: #cc0000;
+    padding: 2px 6px;
+    font-weight: 900;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  #cnn-banner .breaking { color: #ffcc00; }
+
+  #header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #bdbdbd;
+    border: 2px solid;
+    border-color: #7b7b7b #fff #fff #7b7b7b;
+    padding: 4px 5px;
+    margin-bottom: 6px;
+  }
+
+  .led-display {
+    background: #1a0000;
+    color: #ff0000;
+    font-family: 'Courier New', monospace;
+    font-size: 30px;
+    font-weight: bold;
+    padding: 2px 3px;
+    min-width: 60px;
+    text-align: right;
+    border: 1px solid;
+    border-color: #7b7b7b #fff #fff #7b7b7b;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  #smiley-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+    line-height: 36px;
+    text-align: center;
+    border: 2px solid;
+    border-color: #fff #7b7b7b #7b7b7b #fff;
+    background: #bdbdbd;
+    cursor: pointer;
+    padding: 0;
+  }
+  #smiley-btn:active { border-color: #7b7b7b #fff #fff #7b7b7b; }
+
+  #board-wrapper {
+    border: 3px solid;
+    border-color: #7b7b7b #fff #fff #7b7b7b;
+    position: relative;
+    line-height: 0;
+  }
+
+  #map-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  #board {
+    display: grid;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cell {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 24px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .cell.unrevealed {
+    border: 2px solid;
+  }
+  .cell.land.unrevealed {
+    background: rgba(190, 175, 120, 0.65);
+    border-color: rgba(210, 195, 140, 0.8) rgba(140, 125, 70, 0.8) rgba(140, 125, 70, 0.8) rgba(210, 195, 140, 0.8);
+  }
+  .cell.water.unrevealed {
+    background: rgba(120, 170, 210, 0.6);
+    border-color: rgba(150, 195, 225, 0.8) rgba(70, 120, 160, 0.8) rgba(70, 120, 160, 0.8) rgba(150, 195, 225, 0.8);
+  }
+
+  .cell.revealed {
+    border: 1px solid rgba(100, 100, 100, 0.3);
+  }
+  .cell.land.revealed { background: rgba(210, 195, 145, 0.55); }
+  .cell.water.revealed { background: rgba(150, 200, 230, 0.45); }
+
+  .cell.flagged { border: 2px solid; }
+  .cell.land.flagged {
+    background: rgba(190, 175, 120, 0.65);
+    border-color: rgba(210, 195, 140, 0.8) rgba(140, 125, 70, 0.8) rgba(140, 125, 70, 0.8) rgba(210, 195, 140, 0.8);
+  }
+  .cell.water.flagged {
+    background: rgba(120, 170, 210, 0.6);
+    border-color: rgba(150, 195, 225, 0.8) rgba(70, 120, 160, 0.8) rgba(70, 120, 160, 0.8) rgba(150, 195, 225, 0.8);
+  }
+
+  .cell.n1 { color: #0000ff; }
+  .cell.n2 { color: #007b00; }
+  .cell.n3 { color: #ff0000; }
+  .cell.n4 { color: #00007b; }
+  .cell.n5 { color: #7b0000; }
+  .cell.n6 { color: #007b7b; }
+  .cell.n7 { color: #000000; }
+  .cell.n8 { color: #7b7b7b; }
+
+  .cell .flag { color: #ff0000; font-size: 14px; }
+  .cell .mine-icon { font-size: 16px; }
+  .cell.mine-hit { background: #ff0000 !important; }
+  .cell.mine-wrong { background: rgba(255,180,180,0.8) !important; }
+
+  /* Geographic labels */
+  .geo-label {
+    position: absolute;
+    color: rgba(40, 30, 10, 0.7);
+    font-size: 12px;
+    font-weight: bold;
+    font-style: italic;
+    pointer-events: none;
+    z-index: 10;
+    text-shadow: 1px 1px 2px rgba(255,255,255,0.6);
+    white-space: nowrap;
+    font-family: 'Georgia', serif;
+  }
+</style>
+</head>
+<body>
+
+<div id="game">
+  <div id="cnn-banner">
+    <span class="cnn-logo">CNN</span>
+    <span><span class="breaking">BREAKING NEWS</span> &mdash; Iran Begins Laying Mines in Strait of Hormuz</span>
+  </div>
+  <div id="header">
+    <div class="led-display" id="mine-counter">099</div>
+    <button id="smiley-btn">&#128578;</button>
+    <div class="led-display" id="timer">000</div>
+  </div>
+  <div id="board-wrapper">
+    <canvas id="map-canvas"></canvas>
+    <div id="board"></div>
+  </div>
+</div>
+
+<script>
+const ROWS = 16;
+const COLS = 30;
+const MINES = 99;
+const CELL_SIZE = 24;
+const W = COLS * CELL_SIZE;
+const H = ROWS * CELL_SIZE;
+
+// ============================================================
+// TERRAIN MAP - Strait of Hormuz
+// 0=water, 1=Iran mainland, 2=Hormuz island, 3=Qeshm, 4=Larak
+// Matches the meme image layout
+// ============================================================
+const TERRAIN = [
+  [1,1,1,1,1,0,0,0,0,1,1,1,1,0,1,0,1,0,0,0,0,1,0,0,0,1,1,1,1,1],
+  [1,1,1,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1],
+  [1,1,1,1,0,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],
+  [1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+  [0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+  [0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+  [0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,3,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,3,3,3,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,3,3,3,0,0,0,0,0,0],
+  [0,0,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,3,3,3,0,0,0,0,0],
+  [0,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,3,3,0,0,0,0],
+  [0,0,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+
+const GEO_LABELS = [
+  { text: 'Hormuz', row: 8, col: 19.5 },
+  { text: 'Qeshm', row: 11, col: 19.5 },
+  { text: 'Larak', row: 14, col: 1.5 },
+];
+
+// ============================================================
+// Draw the map background on canvas
+// ============================================================
+function drawMap() {
+  const canvas = document.getElementById('map-canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Create a higher-res pixel map for smooth coastlines
+  // First, build a float terrain map with smoothing
+  const pixMap = new Float32Array(W * H);
+
+  // Fill pixel map from cell terrain (basic)
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const isLand = TERRAIN[r][c] > 0 ? 1.0 : 0.0;
+      for (let py = 0; py < CELL_SIZE; py++) {
+        for (let px = 0; px < CELL_SIZE; px++) {
+          pixMap[(r * CELL_SIZE + py) * W + (c * CELL_SIZE + px)] = isLand;
+        }
+      }
+    }
+  }
+
+  // Gaussian blur for smooth coastlines
+  function blur(src, w, h, radius) {
+    const dst = new Float32Array(w * h);
+    const kernel = [];
+    let sum = 0;
+    for (let i = -radius; i <= radius; i++) {
+      const v = Math.exp(-0.5 * (i / (radius * 0.4)) ** 2);
+      kernel.push(v);
+      sum += v;
+    }
+    kernel.forEach((_, i) => kernel[i] /= sum);
+
+    // Horizontal
+    const tmp = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let val = 0;
+        for (let k = -radius; k <= radius; k++) {
+          const sx = Math.min(w - 1, Math.max(0, x + k));
+          val += src[y * w + sx] * kernel[k + radius];
+        }
+        tmp[y * w + x] = val;
+      }
+    }
+    // Vertical
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let val = 0;
+        for (let k = -radius; k <= radius; k++) {
+          const sy = Math.min(h - 1, Math.max(0, y + k));
+          val += tmp[sy * w + x] * kernel[k + radius];
+        }
+        dst[y * w + x] = val;
+      }
+    }
+    return dst;
+  }
+
+  const smoothMap = blur(pixMap, W, H, 8);
+
+  // Simple noise function for terrain texture
+  function noise(x, y) {
+    const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+    return n - Math.floor(n);
+  }
+
+  // Draw pixels
+  const imgData = ctx.createImageData(W, H);
+  const data = imgData.data;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const idx = (y * W + x) * 4;
+      const landVal = smoothMap[y * W + x];
+      const threshold = 0.5;
+
+      // Add subtle noise for texture
+      const n1 = noise(x * 0.1, y * 0.1) * 0.08;
+      const n2 = noise(x * 0.03, y * 0.03) * 0.12;
+      const tex = n1 + n2;
+
+      if (landVal > threshold) {
+        // Land - sandy/terrain colors
+        const blend = Math.min(1, (landVal - threshold) * 4); // edge softness
+        // Base terrain color with variation
+        const n3 = noise(x * 0.02, y * 0.02);
+        const elevation = n3 * 0.15;
+
+        let r = 195 + tex * 80 + elevation * 60;
+        let g = 178 + tex * 60 + elevation * 40;
+        let b = 120 + tex * 40 + elevation * 20;
+
+        // Slight darkening near coast
+        if (landVal < 0.7) {
+          const coastFade = (landVal - threshold) / 0.2;
+          r = r * (0.85 + 0.15 * coastFade);
+          g = g * (0.85 + 0.15 * coastFade);
+          b = b * (0.82 + 0.18 * coastFade);
+        }
+
+        // Blend with water at edges
+        const wr = 130 + tex * 40;
+        const wg = 175 + tex * 30;
+        const wb = 210 + tex * 20;
+
+        data[idx] = Math.min(255, r * blend + wr * (1 - blend));
+        data[idx + 1] = Math.min(255, g * blend + wg * (1 - blend));
+        data[idx + 2] = Math.min(255, b * blend + wb * (1 - blend));
+        data[idx + 3] = 255;
+      } else {
+        // Water - ocean blue with depth variation
+        const depth = (threshold - landVal) * 3;
+        const depthFactor = Math.min(1, depth);
+
+        // Distance from center affects water color (deeper = darker)
+        const cx = W / 2, cy = H / 2;
+        const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2) / Math.sqrt(cx ** 2 + cy ** 2);
+
+        let r = 130 - depthFactor * 30 + tex * 30;
+        let g = 175 - depthFactor * 20 + tex * 25;
+        let b = 215 - depthFactor * 15 + tex * 15;
+
+        // Slight wave pattern
+        const wave = Math.sin(x * 0.15 + y * 0.1) * 3 + Math.sin(x * 0.08 - y * 0.12) * 2;
+        r += wave;
+        g += wave;
+        b += wave * 0.5;
+
+        data[idx] = Math.max(0, Math.min(255, r));
+        data[idx + 1] = Math.max(0, Math.min(255, g));
+        data[idx + 2] = Math.max(0, Math.min(255, b));
+        data[idx + 3] = 255;
+      }
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+
+  // Draw torpedoes/shells in water
+  ctx.save();
+  const torpedoes = [
+    [10, 240], [14, 340], [8, 200], [5, 130], [11, 280],
+    [7, 175], [22, 460], [10, 350], [15, 255], [25, 370],
+    [15, 400], [12, 500], [7, 550], [9, 100], [13, 160],
+  ];
+  torpedoes.forEach(([row, px]) => {
+    const cy = row * CELL_SIZE + 12;
+    const cx = px;
+    // Only draw in water areas
+    const cr = Math.floor(cy / CELL_SIZE);
+    const cc = Math.floor(cx / CELL_SIZE);
+    if (cr >= 0 && cr < ROWS && cc >= 0 && cc < COLS && TERRAIN[cr][cc] === 0) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((noise(cx, cy) - 0.5) * 1.2);
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#4a3520';
+      // Draw torpedo shape
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 10, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(8, 0);
+      ctx.lineTo(13, -3);
+      ctx.lineTo(13, 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  });
+
+  // Draw naval mine icons in water
+  const mines = [
+    [9, 8], [10, 13], [12, 6], [8, 24], [15, 12],
+    [9, 26], [13, 10],
+  ];
+  mines.forEach(([mr, mc]) => {
+    if (mr < ROWS && mc < COLS && TERRAIN[mr][mc] === 0) {
+      const cx = mc * CELL_SIZE + 12;
+      const cy = mr * CELL_SIZE + 12;
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = '#2a2a2a';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+      ctx.fill();
+      // Spikes
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * 5, cy + Math.sin(a) * 5);
+        ctx.lineTo(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9);
+        ctx.strokeStyle = '#2a2a2a';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  });
+
+  ctx.restore();
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let board = [];
+let gameOver = false;
+let gameWon = false;
+let firstClick = true;
+let minesRemaining = MINES;
+let timerValue = 0;
+let timerInterval = null;
+
+const boardEl = document.getElementById('board');
+const mineCounterEl = document.getElementById('mine-counter');
+const timerEl = document.getElementById('timer');
+const smileyBtn = document.getElementById('smiley-btn');
+const boardWrapper = document.getElementById('board-wrapper');
+
+function isLand(r, c) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+  return TERRAIN[r][c] > 0;
+}
+
+function initBoard() {
+  board = [];
+  for (let r = 0; r < ROWS; r++) {
+    board[r] = [];
+    for (let c = 0; c < COLS; c++) {
+      board[r][c] = { mine: false, revealed: false, flagged: false, count: 0 };
+    }
+  }
+}
+
+function placeMines(excludeR, excludeC) {
+  let placed = 0;
+  const excluded = new Set();
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      excluded.add(`${excludeR + dr},${excludeC + dc}`);
+    }
+  }
+  while (placed < MINES) {
+    const r = Math.floor(Math.random() * ROWS);
+    const c = Math.floor(Math.random() * COLS);
+    if (board[r][c].mine || excluded.has(`${r},${c}`)) continue;
+    board[r][c].mine = true;
+    placed++;
+  }
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (board[r][c].mine) continue;
+      let count = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc].mine) count++;
+        }
+      }
+      board[r][c].count = count;
+    }
+  }
+}
+
+function renderBoard() {
+  boardEl.innerHTML = '';
+  boardEl.style.gridTemplateColumns = `repeat(${COLS}, ${CELL_SIZE}px)`;
+  boardEl.style.gridTemplateRows = `repeat(${ROWS}, ${CELL_SIZE}px)`;
+  boardEl.style.width = W + 'px';
+  boardEl.style.height = H + 'px';
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell unrevealed ' + (isLand(r, c) ? 'land' : 'water');
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cell.addEventListener('mousedown', onCellMouseDown);
+      cell.addEventListener('mouseup', onCellMouseUp);
+      cell.addEventListener('contextmenu', e => e.preventDefault());
+      boardEl.appendChild(cell);
+    }
+  }
+
+  // Geographic labels
+  GEO_LABELS.forEach(label => {
+    const el = document.createElement('div');
+    el.className = 'geo-label';
+    el.textContent = label.text;
+    el.style.left = (label.col * CELL_SIZE) + 'px';
+    el.style.top = (label.row * CELL_SIZE + 7) + 'px';
+    boardEl.appendChild(el);
+  });
+}
+
+function getCellEl(r, c) {
+  return boardEl.children[r * COLS + c];
+}
+
+function updateCell(r, c) {
+  const cell = board[r][c];
+  const el = getCellEl(r, c);
+  if (!el || el.className.includes('geo-label')) return;
+  const terrain = isLand(r, c) ? 'land' : 'water';
+
+  if (cell.revealed) {
+    el.className = `cell revealed ${terrain}`;
+    if (cell.mine) {
+      el.innerHTML = '<span class="mine-icon">💣</span>';
+    } else if (cell.count > 0) {
+      el.className += ` n${cell.count}`;
+      el.textContent = cell.count;
+    } else {
+      el.textContent = '';
+    }
+  } else if (cell.flagged) {
+    el.className = `cell flagged ${terrain}`;
+    el.innerHTML = '<span class="flag">🚩</span>';
+  } else {
+    el.className = `cell unrevealed ${terrain}`;
+    el.innerHTML = '';
+  }
+}
+
+function reveal(r, c) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+  const cell = board[r][c];
+  if (cell.revealed || cell.flagged) return;
+  cell.revealed = true;
+  updateCell(r, c);
+  if (cell.mine) return;
+  if (cell.count === 0) {
+    for (let dr = -1; dr <= 1; dr++)
+      for (let dc = -1; dc <= 1; dc++)
+        if (dr !== 0 || dc !== 0) reveal(r + dr, c + dc);
+  }
+}
+
+function revealAll() {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = board[r][c];
+      if (cell.mine && !cell.flagged) {
+        cell.revealed = true;
+        updateCell(r, c);
+      }
+      if (!cell.mine && cell.flagged) {
+        cell.revealed = true;
+        const el = getCellEl(r, c);
+        el.classList.add('mine-wrong');
+        el.innerHTML = '<span class="mine-icon" style="font-size:12px">💣</span><span style="position:absolute;color:red;font-size:18px;top:0;left:4px;font-weight:bold">✕</span>';
+      }
+    }
+  }
+}
+
+function checkWin() {
+  let unrevealed = 0;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (!board[r][c].mine && !board[r][c].revealed) unrevealed++;
+  if (unrevealed === 0) {
+    gameWon = true;
+    gameOver = true;
+    stopTimer();
+    smileyBtn.innerHTML = '&#128526;';
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        if (board[r][c].mine && !board[r][c].flagged) {
+          board[r][c].flagged = true;
+          updateCell(r, c);
+        }
+    minesRemaining = 0;
+    updateMineCounter();
+  }
+}
+
+function doChord(r, c) {
+  const cell = board[r][c];
+  if (!cell.revealed || cell.count === 0) return;
+  let flagCount = 0;
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc].flagged) flagCount++;
+    }
+  if (flagCount !== cell.count) return;
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !board[nr][nc].flagged && !board[nr][nc].revealed) {
+        if (board[nr][nc].mine) {
+          board[nr][nc].revealed = true;
+          const el = getCellEl(nr, nc);
+          el.classList.add('revealed', 'mine-hit');
+          el.innerHTML = '<span class="mine-icon">💣</span>';
+          gameOver = true;
+          stopTimer();
+          smileyBtn.innerHTML = '&#128565;';
+          revealAll();
+          return;
+        }
+        reveal(nr, nc);
+      }
+    }
+  checkWin();
+}
+
+function onCellMouseDown(e) {
+  e.preventDefault();
+  if (gameOver) return;
+  if (e.button === 0) smileyBtn.innerHTML = '&#128558;';
+}
+
+function onCellMouseUp(e) {
+  e.preventDefault();
+  if (gameOver) return;
+
+  const target = e.target.closest('.cell');
+  if (!target) return;
+  const r = parseInt(target.dataset.row);
+  const c = parseInt(target.dataset.col);
+  if (isNaN(r) || isNaN(c)) return;
+  const cell = board[r][c];
+
+  if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
+    if (!cell.revealed) {
+      cell.flagged = !cell.flagged;
+      minesRemaining += cell.flagged ? -1 : 1;
+      updateMineCounter();
+      updateCell(r, c);
+    }
+    return;
+  }
+
+  if (e.button === 1) { doChord(r, c); return; }
+
+  if (e.button === 0) {
+    smileyBtn.innerHTML = '&#128578;';
+    if (cell.flagged) return;
+
+    if (cell.revealed) { doChord(r, c); return; }
+
+    if (firstClick) {
+      firstClick = false;
+      placeMines(r, c);
+      startTimer();
+    }
+
+    if (cell.mine) {
+      cell.revealed = true;
+      const el = getCellEl(r, c);
+      el.className = `cell revealed ${isLand(r, c) ? 'land' : 'water'} mine-hit`;
+      el.innerHTML = '<span class="mine-icon">💣</span>';
+      gameOver = true;
+      stopTimer();
+      smileyBtn.innerHTML = '&#128565;';
+      revealAll();
+      return;
+    }
+
+    reveal(r, c);
+    checkWin();
+  }
+}
+
+function updateMineCounter() {
+  const val = Math.max(-99, Math.min(999, minesRemaining));
+  mineCounterEl.textContent = val < 0
+    ? '-' + String(Math.abs(val)).padStart(2, '0')
+    : String(val).padStart(3, '0');
+}
+
+function startTimer() {
+  timerValue = 0;
+  timerInterval = setInterval(() => {
+    if (++timerValue > 999) timerValue = 999;
+    timerEl.textContent = String(timerValue).padStart(3, '0');
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function newGame() {
+  gameOver = false;
+  gameWon = false;
+  firstClick = true;
+  minesRemaining = MINES;
+  timerValue = 0;
+  stopTimer();
+  timerEl.textContent = '000';
+  updateMineCounter();
+  smileyBtn.innerHTML = '&#128578;';
+  initBoard();
+  renderBoard();
+  drawMap();
+}
+
+smileyBtn.addEventListener('click', newGame);
+boardWrapper.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('mouseup', () => { if (!gameOver) smileyBtn.innerHTML = '&#128578;'; });
+
+newGame();
+</script>
+</body>
+</html>
