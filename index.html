@@ -234,7 +234,7 @@ const GEO_LABELS = [
 // ============================================================
 // Draw the map background on canvas (satellite image)
 // ============================================================
-const MAP_IMG_URL = 'https://static.scientificamerican.com/dam/m/f61708c9daa7466/original/Strait_of_Hormuz-modified.png';
+const MAP_IMG_URL = 'hormuz-bg.png';
 
 function drawMap() {
   const canvas = document.getElementById('map-canvas');
@@ -243,7 +243,6 @@ function drawMap() {
   const ctx = canvas.getContext('2d');
 
   const img = new Image();
-  img.crossOrigin = 'anonymous';
   img.onload = function() {
     // Cover the canvas with the image, cropping to fit
     const scale = Math.max(W / img.width, H / img.height);
