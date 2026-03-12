@@ -232,211 +232,38 @@ const GEO_LABELS = [
 ];
 
 // ============================================================
-// Draw the map background on canvas
+// Draw the map background on canvas (satellite image)
 // ============================================================
+const MAP_IMG_URL = 'https://static.scientificamerican.com/dam/m/f61708c9daa7466/original/Strait_of_Hormuz-modified.png';
+
 function drawMap() {
   const canvas = document.getElementById('map-canvas');
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // Create a higher-res pixel map for smooth coastlines
-  // First, build a float terrain map with smoothing
-  const pixMap = new Float32Array(W * H);
-
-  // Fill pixel map from cell terrain (basic)
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const isLand = TERRAIN[r][c] > 0 ? 1.0 : 0.0;
-      for (let py = 0; py < CELL_SIZE; py++) {
-        for (let px = 0; px < CELL_SIZE; px++) {
-          pixMap[(r * CELL_SIZE + py) * W + (c * CELL_SIZE + px)] = isLand;
-        }
-      }
-    }
-  }
-
-  // Gaussian blur for smooth coastlines
-  function blur(src, w, h, radius) {
-    const dst = new Float32Array(w * h);
-    const kernel = [];
-    let sum = 0;
-    for (let i = -radius; i <= radius; i++) {
-      const v = Math.exp(-0.5 * (i / (radius * 0.4)) ** 2);
-      kernel.push(v);
-      sum += v;
-    }
-    kernel.forEach((_, i) => kernel[i] /= sum);
-
-    // Horizontal
-    const tmp = new Float32Array(w * h);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        let val = 0;
-        for (let k = -radius; k <= radius; k++) {
-          const sx = Math.min(w - 1, Math.max(0, x + k));
-          val += src[y * w + sx] * kernel[k + radius];
-        }
-        tmp[y * w + x] = val;
-      }
-    }
-    // Vertical
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        let val = 0;
-        for (let k = -radius; k <= radius; k++) {
-          const sy = Math.min(h - 1, Math.max(0, y + k));
-          val += tmp[sy * w + x] * kernel[k + radius];
-        }
-        dst[y * w + x] = val;
-      }
-    }
-    return dst;
-  }
-
-  const smoothMap = blur(pixMap, W, H, 8);
-
-  // Simple noise function for terrain texture
-  function noise(x, y) {
-    const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-    return n - Math.floor(n);
-  }
-
-  // Draw pixels
-  const imgData = ctx.createImageData(W, H);
-  const data = imgData.data;
-
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const idx = (y * W + x) * 4;
-      const landVal = smoothMap[y * W + x];
-      const threshold = 0.5;
-
-      // Add subtle noise for texture
-      const n1 = noise(x * 0.1, y * 0.1) * 0.08;
-      const n2 = noise(x * 0.03, y * 0.03) * 0.12;
-      const tex = n1 + n2;
-
-      if (landVal > threshold) {
-        // Land - sandy/terrain colors
-        const blend = Math.min(1, (landVal - threshold) * 4); // edge softness
-        // Base terrain color with variation
-        const n3 = noise(x * 0.02, y * 0.02);
-        const elevation = n3 * 0.15;
-
-        let r = 195 + tex * 80 + elevation * 60;
-        let g = 178 + tex * 60 + elevation * 40;
-        let b = 120 + tex * 40 + elevation * 20;
-
-        // Slight darkening near coast
-        if (landVal < 0.7) {
-          const coastFade = (landVal - threshold) / 0.2;
-          r = r * (0.85 + 0.15 * coastFade);
-          g = g * (0.85 + 0.15 * coastFade);
-          b = b * (0.82 + 0.18 * coastFade);
-        }
-
-        // Blend with water at edges
-        const wr = 130 + tex * 40;
-        const wg = 175 + tex * 30;
-        const wb = 210 + tex * 20;
-
-        data[idx] = Math.min(255, r * blend + wr * (1 - blend));
-        data[idx + 1] = Math.min(255, g * blend + wg * (1 - blend));
-        data[idx + 2] = Math.min(255, b * blend + wb * (1 - blend));
-        data[idx + 3] = 255;
-      } else {
-        // Water - ocean blue with depth variation
-        const depth = (threshold - landVal) * 3;
-        const depthFactor = Math.min(1, depth);
-
-        // Distance from center affects water color (deeper = darker)
-        const cx = W / 2, cy = H / 2;
-        const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2) / Math.sqrt(cx ** 2 + cy ** 2);
-
-        let r = 130 - depthFactor * 30 + tex * 30;
-        let g = 175 - depthFactor * 20 + tex * 25;
-        let b = 215 - depthFactor * 15 + tex * 15;
-
-        // Slight wave pattern
-        const wave = Math.sin(x * 0.15 + y * 0.1) * 3 + Math.sin(x * 0.08 - y * 0.12) * 2;
-        r += wave;
-        g += wave;
-        b += wave * 0.5;
-
-        data[idx] = Math.max(0, Math.min(255, r));
-        data[idx + 1] = Math.max(0, Math.min(255, g));
-        data[idx + 2] = Math.max(0, Math.min(255, b));
-        data[idx + 3] = 255;
-      }
-    }
-  }
-
-  ctx.putImageData(imgData, 0, 0);
-
-  // Draw torpedoes/shells in water
-  ctx.save();
-  const torpedoes = [
-    [10, 240], [14, 340], [8, 200], [5, 130], [11, 280],
-    [7, 175], [22, 460], [10, 350], [15, 255], [25, 370],
-    [15, 400], [12, 500], [7, 550], [9, 100], [13, 160],
-  ];
-  torpedoes.forEach(([row, px]) => {
-    const cy = row * CELL_SIZE + 12;
-    const cx = px;
-    // Only draw in water areas
-    const cr = Math.floor(cy / CELL_SIZE);
-    const cc = Math.floor(cx / CELL_SIZE);
-    if (cr >= 0 && cr < ROWS && cc >= 0 && cc < COLS && TERRAIN[cr][cc] === 0) {
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate((noise(cx, cy) - 0.5) * 1.2);
-      ctx.globalAlpha = 0.2;
-      ctx.fillStyle = '#4a3520';
-      // Draw torpedo shape
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 3, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(8, 0);
-      ctx.lineTo(13, -3);
-      ctx.lineTo(13, 3);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-  });
-
-  // Draw naval mine icons in water
-  const mines = [
-    [9, 8], [10, 13], [12, 6], [8, 24], [15, 12],
-    [9, 26], [13, 10],
-  ];
-  mines.forEach(([mr, mc]) => {
-    if (mr < ROWS && mc < COLS && TERRAIN[mr][mc] === 0) {
-      const cx = mc * CELL_SIZE + 12;
-      const cy = mr * CELL_SIZE + 12;
-      ctx.save();
-      ctx.globalAlpha = 0.18;
-      ctx.fillStyle = '#2a2a2a';
-      ctx.beginPath();
-      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-      ctx.fill();
-      // Spikes
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(a) * 5, cy + Math.sin(a) * 5);
-        ctx.lineTo(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9);
-        ctx.strokeStyle = '#2a2a2a';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-  });
-
-  ctx.restore();
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+    // Cover the canvas with the image, cropping to fit
+    const scale = Math.max(W / img.width, H / img.height);
+    const sw = W / scale;
+    const sh = H / scale;
+    const sx = (img.width - sw) / 2;
+    const sy = (img.height - sh) / 2;
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+  };
+  img.onerror = function() {
+    // Fallback: draw a simple blue/tan gradient if image fails to load
+    const gradient = ctx.createLinearGradient(0, 0, W, H);
+    gradient.addColorStop(0, '#c8b87c');
+    gradient.addColorStop(0.35, '#78aad2');
+    gradient.addColorStop(0.65, '#78aad2');
+    gradient.addColorStop(1, '#c8b87c');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+  };
+  img.src = MAP_IMG_URL;
 }
 
 // ============================================================
