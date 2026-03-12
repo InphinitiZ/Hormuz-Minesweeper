@@ -110,12 +110,13 @@
   .cell {
     width: 24px;
     height: 24px;
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 15px;
+    font-weight: 900;
     text-align: center;
     line-height: 24px;
     cursor: pointer;
     position: relative;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
   }
 
   .cell.unrevealed {
@@ -126,7 +127,7 @@
 
   .cell.revealed {
     border: 1px solid rgba(100, 100, 100, 0.3);
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.25);
   }
 
   .cell.flagged {
@@ -144,7 +145,7 @@
   .cell.n7 { color: #000000; }
   .cell.n8 { color: #7b7b7b; }
 
-  .cell .flag { color: #ff0000; font-size: 14px; }
+  .cell .flag { color: #ff0000; font-size: 16px; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6)); }
   .cell .mine-icon { font-size: 16px; }
   .cell.mine-hit { background: #ff0000 !important; }
   .cell.mine-wrong { background: rgba(255,180,180,0.8) !important; }
