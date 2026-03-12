@@ -120,30 +120,19 @@
 
   .cell.unrevealed {
     border: 2px solid;
-  }
-  .cell.land.unrevealed {
-    background: rgba(190, 175, 120, 0.65);
-    border-color: rgba(210, 195, 140, 0.8) rgba(140, 125, 70, 0.8) rgba(140, 125, 70, 0.8) rgba(210, 195, 140, 0.8);
-  }
-  .cell.water.unrevealed {
-    background: rgba(120, 170, 210, 0.6);
-    border-color: rgba(150, 195, 225, 0.8) rgba(70, 120, 160, 0.8) rgba(70, 120, 160, 0.8) rgba(150, 195, 225, 0.8);
+    background: transparent;
+    border-color: rgba(255,255,255,0.3) rgba(0,0,0,0.2) rgba(0,0,0,0.2) rgba(255,255,255,0.3);
   }
 
   .cell.revealed {
     border: 1px solid rgba(100, 100, 100, 0.3);
+    background: rgba(255, 255, 255, 0.15);
   }
-  .cell.land.revealed { background: rgba(210, 195, 145, 0.55); }
-  .cell.water.revealed { background: rgba(150, 200, 230, 0.45); }
 
-  .cell.flagged { border: 2px solid; }
-  .cell.land.flagged {
-    background: rgba(190, 175, 120, 0.65);
-    border-color: rgba(210, 195, 140, 0.8) rgba(140, 125, 70, 0.8) rgba(140, 125, 70, 0.8) rgba(210, 195, 140, 0.8);
-  }
-  .cell.water.flagged {
-    background: rgba(120, 170, 210, 0.6);
-    border-color: rgba(150, 195, 225, 0.8) rgba(70, 120, 160, 0.8) rgba(70, 120, 160, 0.8) rgba(150, 195, 225, 0.8);
+  .cell.flagged {
+    border: 2px solid;
+    background: transparent;
+    border-color: rgba(255,255,255,0.3) rgba(0,0,0,0.2) rgba(0,0,0,0.2) rgba(255,255,255,0.3);
   }
 
   .cell.n1 { color: #0000ff; }
